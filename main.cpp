@@ -1110,6 +1110,7 @@ void printHelp(char *binary)
 	   "  -to X Z       sets the coordinate of the chunk to end rendering at\n"
 	   "                Note: Currently you need both -from and -to to define\n"
 	   "                bounds, otherwise the entire world will be rendered.\n"
+	   "  -3            use image Y offset = 3 (default is 2).\n"
 	   "  -cave         renders a map of all caves that have been explored by players\n"
 	   "  -blendcave    overlay caves over normal map; doesn't work with incremental\n"
 	   "                rendering (some parts will be hidden)\n"
