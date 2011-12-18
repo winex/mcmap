@@ -17,6 +17,6 @@ void blendPixel(const size_t x, const size_t y, const uint8_t color, const float
 bool saveImagePart();
 bool discardImagePart();
 bool composeFinalImage();
-uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const bool tight = false);
+uint64_t calcImageSize(const int mapChunksX, const int mapChunksZ, const size_t mapHeight, int &pixelsX, int &pixelsY, const int border = 0);
 
 #endif

@@ -30,6 +30,7 @@ extern size_t g_MapsizeZ, g_MapsizeX;
 extern int g_MapminY, g_MapsizeY;
 
 extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array (2 or 3)
+extern int g_BorderSize; // final image border size in pixels
 
 extern int g_WorldFormat;
 extern Orientation g_Orientation; // North, West, South, East
