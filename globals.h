@@ -29,6 +29,7 @@ extern int g_FromChunkX, g_FromChunkZ, g_ToChunkX, g_ToChunkZ;
 extern size_t g_MapsizeY, g_MapminY, g_MapsizeZ, g_MapsizeX;
 
 extern int g_OffsetY; // y pixel offset in the final image for one y step in 3d array (2 or 3)
+extern int g_BorderSize; // final image border size in pixels
 
 extern bool g_RegionFormat;
 extern Orientation g_Orientation; // North, West, South, East

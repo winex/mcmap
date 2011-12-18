@@ -182,6 +182,12 @@ int main(int argc, char **argv)
 					return 1;
 				}
 				outfile = NEXTARG;
+			} else if (strcmp(option, "-border") == 0) {
+				if (!MOREARGS(1) || !isNumeric(POLLARG(1))) {
+					printf("Error: %s needs an integer argument, ie: %s 10\n", option, option);
+					return 1;
+				}
+				g_BorderSize = atoi(NEXTARG);
 			} else if (strcmp(option, "-colors") == 0) {
 				if (!MOREARGS(1)) {
 					printf("Error: %s needs one argument, ie: %s colors.txt\n", option, option);
@@ -220,6 +226,8 @@ int main(int argc, char **argv)
 					return 1;
 				}
 				g_TilePath = NEXTARG;
+				// reset border if set
+				g_BorderSize = 0;
 			} else if (strcmp(option, "-help") == 0 || strcmp(option, "-h") == 0 || strcmp(option, "-?") == 0) {
 				printHelp(argv[0]);
 				return 0;
@@ -384,7 +392,7 @@ int main(int argc, char **argv)
 
 	// Mem check
 	int bitmapX, bitmapY;
-	uint64_t bitmapBytes = calcImageSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY, false);
+	uint64_t bitmapBytes = calcImageSize(g_ToChunkX - g_FromChunkX, g_ToChunkZ - g_FromChunkZ, g_MapsizeY, bitmapX, bitmapY, g_BorderSize);
 	// Cropping
 	int cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
 	if (wholeworld) {
@@ -427,7 +435,7 @@ int main(int argc, char **argv)
 			int subAreaX = ((g_TotalToChunkX - g_TotalFromChunkX) + (numSplitsX - 1)) / numSplitsX;
 			int subAreaZ = ((g_TotalToChunkZ - g_TotalFromChunkZ) + (numSplitsZ - 1)) / numSplitsZ;
 			int subBitmapX, subBitmapY;
-			if (splitImage && calcImageSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, true) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
+			if (splitImage && calcImageSize(subAreaX, subAreaZ, g_MapsizeY, subBitmapX, subBitmapY, 0) + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
 			} else if (!splitImage && bitmapBytes + calcTerrainSize(subAreaX, subAreaZ) <= memlimit) {
 				break; // Found a suitable partitioning
@@ -482,7 +490,8 @@ int main(int argc, char **argv)
 	// to create something like a virtual window inside the map.
 	for (;;) {
 
-		int bitmapStartX = 3, bitmapStartY = 5;
+		// size of rendered block is 2
+		int bitmapStartX = g_BorderSize - 2, bitmapStartY = g_BorderSize - ((g_OffsetY == 3) ? 1 : 2);
 		if (numSplitsX) { // virtual window is set here
 			// Set current chunk bounds according to number of splits. returns true if everything has been rendered already
 			if (prepareNextArea(numSplitsX, numSplitsZ, bitmapStartX, bitmapStartY)) {
@@ -490,8 +499,8 @@ int main(int argc, char **argv)
 			}
 			// if image is split up, prepare memory block for next part
 			if (splitImage) {
-				bitmapStartX += 2;
 				const int sizex = (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X * 2 + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z * 2;
+				/// TODO: 20111218 winex: what is the last 3 here???
 				const int sizey = (int)g_MapsizeY * g_OffsetY + (g_ToChunkX - g_FromChunkX) * CHUNKSIZE_X + (g_ToChunkZ - g_FromChunkZ) * CHUNKSIZE_Z + 3;
 				if (sizex <= 0 || sizey <= 0) continue; // Don't know if this is right, might also be that the size calulation is plain wrong
 				int res = loadImagePart(bitmapStartX - cropLeft, bitmapStartY - cropTop, sizex, sizey);
@@ -578,8 +587,8 @@ int main(int argc, char **argv)
 					colors[BIRCHLEAVES][PBLUE] = clamp(int32_t(colors[LEAVES][PBLUE]) + (avg - int32_t(colors[LEAVES][PBLUE])) / 2 + 15);
 				}
 				//
-				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX - cropLeft));
-				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY - cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
+				const int bmpPosX = int((g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (bitmapStartX - cropLeft));
+				int bmpPosY = int(g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (bitmapStartY - cropTop)) + 2 - (HEIGHTAT(x, z) & 0xFF) * g_OffsetY;
 				const size_t max = (HEIGHTAT(x, z) & 0xFF00) >> 8;
 				for (size_t y = uint8_t(HEIGHTAT(x, z)); y < max; ++y) {
 					bmpPosY -= g_OffsetY;
@@ -675,8 +684,8 @@ int main(int argc, char **argv)
 			for (size_t x = CHUNKSIZE_X; x < g_MapsizeX - CHUNKSIZE_X; ++x) {
 				printProgress(x - CHUNKSIZE_X, g_MapsizeX);
 				for (size_t z = CHUNKSIZE_Z; z < g_MapsizeZ - CHUNKSIZE_Z; ++z) {
-					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (splitImage ? -2 : bitmapStartX) - cropLeft;
-					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (splitImage ? 0 : bitmapStartY) - cropTop;
+					const size_t bmpPosX = (g_MapsizeZ - z - CHUNKSIZE_Z) * 2 + (x - CHUNKSIZE_X) * 2 + (bitmapStartX - cropLeft);
+					size_t bmpPosY = g_MapsizeY * g_OffsetY + z + x - CHUNKSIZE_Z - CHUNKSIZE_X + (bitmapStartY - cropTop);
 					for (size_t y = 0; y < MIN(g_MapsizeY, 64); ++y) {
 						uint8_t &c = BLOCKAT(x, y, z);
 						if (c != AIR) { // If block is not air (colors[c][3] != 0)
@@ -1099,7 +1108,7 @@ void printHelp(char *binary)
 	   "  -to X Z       sets the coordinate of the chunk to end rendering at\n"
 	   "                Note: Currently you need both -from and -to to define\n"
 	   "                bounds, otherwise the entire world will be rendered.\n"
-	   "  -3            use image Y offset = 3 (default is 2).\n"
+	   "  -3            render each block 3 pixels tall (default is 2)\n"
 	   "  -cave         renders a map of all caves that have been explored by players\n"
 	   "  -blendcave    overlay caves over normal map; doesn't work with incremental\n"
 	   "                rendering (some parts will be hidden)\n"
@@ -1113,6 +1122,7 @@ void printHelp(char *binary)
 	   "  -mem VAL      sets the amount of memory (in MiB) used for rendering. mcmap\n"
 	   "                will use incremental rendering or disk caching to stick to\n"
 	   "                this limit. Default is 1800.\n"
+	   "  -border VAL   add empty border to final image in pixels (0 in -split mode)\n"
 	   "  -colors NAME  loads user defined colors from file 'NAME'\n"
 	   "  -dumpcolors   creates a file which contains the default colors being used\n"
 	   "                for rendering. Can be used to modify them and then use -colors\n"
